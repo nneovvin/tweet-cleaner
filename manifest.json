@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "트윗 청소기",
+  "version": "1.0.0",
+  "description": "트윗 청소 서비스",
+  "permissions": ["tabs", "storage", "scripting"],
+  "host_permissions": [
+    "https://x.com/*",
+    "https://abs.twimg.com/*"
+  ],
+
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  }
+}

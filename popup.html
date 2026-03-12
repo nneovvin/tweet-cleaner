@@ -1,0 +1,90 @@
+<!-- 트윗 청소기 v1.0
+Copyright (c) 2026 myo @nneovvin -->
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { width: 420px; background: #fff; color: #000; font-family: -apple-system, sans-serif; font-size: 14px; padding: 15px; }
+  .header { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+  .title { font-size: 15px; font-weight: 700; color: #000; }
+  .status { display: flex; align-items: center; gap: 6px; font-size: 14px; color: #888; margin-left: auto; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: #444; }
+  .dot.online { background: #000; }
+  .dot.offline { background: #444; }
+  .section { margin-bottom: 10px; }
+  label { font-size: 12px; color: #888; display: block; margin-bottom: 4px; }
+  input, select { width: 100%; background: #e2e2e2; border: none; border-radius: 7px; padding: 7px 10px; color: #2e2e2e; font-size: 12px; outline: none; }
+  select option { background: #e2e2e2; }
+  .row { display: flex; gap: 8px; }
+  .row > div { flex: 1; }
+  .queue-info { background: transparent; border: 0px solid #222; border-radius: 7px; padding: 8px 10px; margin-bottom: 10px; font-size: 14px; color: #2e2e2e; display: flex; justify-content: space-between; align-items: center; }
+  .queue-count { color: #2e2e2e; font-weight: 700; font-size: 14px; }
+  .btn-row { display: flex; gap: 8px; margin-bottom: 10px; }
+  .btn { flex: 1; border: none; border-radius: 8px; padding: 10px; font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-collect { background: rgb(74, 153, 233); color: #fff; }
+  .btn-delete  { background: rgb(16, 20, 24); color: #fff; }
+  .btn-stop    { background: rgb(224, 60, 58); color: #fff; }
+  .btn-clear   { background: transparent; border: none !important; color: #888; font-size: 11px; padding: 6px 10px; flex: 0;cursor: pointer; }
+  .log { height: 260px; overflow-y: auto; background: transparent; border: none; padding: 8px; }
+  .entry { font-size: 11px; padding: 2px 0; border-bottom: 1px solid #e2e2e2; color: #2e2e2e; word-break: break-all; }
+  .entry.ok  { color: rgb(74, 153, 233); }
+  .entry.err { color: rgb(224, 60, 58); }
+  .entry.info { color: rgb(16, 20, 24); }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="title">트윗 청소기</div>
+  <div class="status">
+    <div class="dot" id="dot"></div>
+    <span id="status-text">확인 중....</span>
+  </div>
+</div>
+
+<div class="queue-info">
+  <span>현재 로드한 트윗 개수</span>
+  <span class="queue-count" id="queue-count">0</span>
+  <button class="btn-clear" id="btn-clear">reset</button>
+</div>
+
+<div class="section">
+  <label>선택한 날짜 구간만 삭제할까요?</label>
+  <div class="row">
+    <div><input type="date" id="from"></div>
+    <div><input type="date" id="to"></div>
+  </div>
+</div>
+<div class="section">
+  <div class="row">
+    <div>
+      <label>선택한 마음수 이하만 삭제할까요?</label>
+      <input type="number" id="max-like" placeholder="" min="0">
+    </div>
+    <div>
+      <label>종류</label>
+      <select id="kind">
+        <option value="all">전체</option>
+        <option value="tweet">트윗만</option>
+        <option value="reply">답글만</option>
+      </select>
+    </div>
+  </div>
+</div>
+<label>아무것도 선택하지 않으면 모두 삭제합니다.</label><br>
+
+<div class="btn-row">
+  <button class="btn btn-collect" id="btn-collect" disabled>로드하기</button>
+  <button class="btn btn-delete"  id="btn-delete"  disabled>삭제하기</button>
+  <button class="btn btn-stop"    id="btn-stop"    disabled>그만하기</button>
+</div>
+
+
+<div class="log" id="log"></div>
+
+<script src="popup.js"></script>
+</body>
+</html>
