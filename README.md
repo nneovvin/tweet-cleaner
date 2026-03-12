@@ -12,7 +12,6 @@ Delete your tweets easily with a Chrome extension.
 
 <img width="1552" height="902" alt="Image" src="https://github.com/user-attachments/assets/d54d4db7-909d-4e4c-a7a9-7bba3f1b81d9" />
 
----
 
 안녕하세요 **트윗 청소기(aka 트청)** 를 만들었습니다.  
 Hi guys, I made **Tweet Cleaner (Tweet Deleter)**.
@@ -26,7 +25,6 @@ Hi guys, I made **Tweet Cleaner (Tweet Deleter)**.
 > 계정 정지에 대해서는 책임지지 않습니다.  
 > I am **not responsible for any account suspension**.
 
----
 
 # ✨ 특징
 
@@ -39,7 +37,6 @@ Hi guys, I made **Tweet Cleaner (Tweet Deleter)**.
 - **중단 후 재시작**  
   중단되어도 자동으로 **중단된 부분부터 다시 시작합니다.**
 
----
 
 # ✨ Features
 
@@ -52,7 +49,6 @@ Hi guys, I made **Tweet Cleaner (Tweet Deleter)**.
 - **Resume after pause**  
   If stopped, it automatically resumes from where it left off.
 
----
 
 # ⚠️ 주의사항
 
@@ -63,7 +59,6 @@ X 규정상 빠른 속도로 많은 트윗을 삭제하면
 - 대량 삭제가 필요하면 **아카이브 기반 트청 사용**
 - 소량을 **주기적으로 삭제**하거나 백그라운드 실행 추천
 
----
 
 # ⚠️ Warning
 
@@ -75,7 +70,9 @@ Deleting tweets too quickly or in large volumes may result in
 - Best for users who want to delete tweets periodically in small batches  
   or simply leave it running in the background
 
----
+
+![Image](https://github.com/user-attachments/assets/3b023230-4553-45d0-99d9-8d76af4a1158)
+
 
 # 📦 설치 방법
 
@@ -84,7 +81,6 @@ Deleting tweets too quickly or in large volumes may result in
 3. **압축해제된 확장 프로그램 로드** 클릭
 4. 압축 해제한 폴더 선택
 
----
 
 # 📦 Installation
 
@@ -93,7 +89,6 @@ Deleting tweets too quickly or in large volumes may result in
 3. Click **Load unpacked**.
 4. Select the extracted folder.
 
----
 
 # 📍 사용 방법
 
@@ -108,9 +103,6 @@ Deleting tweets too quickly or in large volumes may result in
 > **문제가 생기면**  
 > 크롬 새로고침 또는 재시작 → **Reset** 클릭 → 3번부터 다시 시작
 
----
-
-![Image](https://github.com/user-attachments/assets/3b023230-4553-45d0-99d9-8d76af4a1158)
 
 # 📍 How to Use
 
@@ -125,7 +117,6 @@ You can now **leave the tab open while deletion runs in the background**.
 > **If something goes wrong**  
 > Refresh the page or restart Chrome, click **Reset**, then start again from step 3.
 
----
 
 # 📄 License
 
