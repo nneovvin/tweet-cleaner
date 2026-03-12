@@ -10,6 +10,8 @@
 
 Delete your tweets easily with a Chrome extension.  
 
+<img width="1552" height="902" alt="Image" src="https://github.com/user-attachments/assets/d54d4db7-909d-4e4c-a7a9-7bba3f1b81d9" />
+
 ---
 
 안녕하세요 **트윗 청소기(aka 트청)** 를 만들었습니다.  
@@ -107,6 +109,8 @@ Deleting tweets too quickly or in large volumes may result in
 > 크롬 새로고침 또는 재시작 → **Reset** 클릭 → 3번부터 다시 시작
 
 ---
+
+![Image](https://github.com/user-attachments/assets/3b023230-4553-45d0-99d9-8d76af4a1158)
 
 # 📍 How to Use
 
