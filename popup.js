@@ -7,8 +7,6 @@ let running = false;
 const dot        = document.getElementById('dot');
 const statusText = document.getElementById('status-text');
 const logEl      = document.getElementById('log');
-const counterEl  = document.getElementById('counter');
-const countNum   = document.getElementById('count-num');
 const queueCount = document.getElementById('queue-count');
 const btnCollect = document.getElementById('btn-collect');
 const btnDelete  = document.getElementById('btn-delete');
@@ -16,6 +14,7 @@ const btnStop    = document.getElementById('btn-stop');
 const btnClear   = document.getElementById('btn-clear');
 
 function addLog(msg, level = 'info') {
+  logEl.style.display = 'block';
   const div = document.createElement('div');
   div.className = 'entry ' + level;
   div.textContent = msg;
@@ -43,12 +42,13 @@ async function restoreState() {
     d.textContent = l.msg;
     logEl.appendChild(d);
   });
+  if (logs.length) logEl.style.display = 'block';
   if (state.running) { setRunning(true); addLog('백그라운드 실행 중입니다....'); }
 }
 
 chrome.runtime.onMessage.addListener((msg) => {
   if (msg.type === 'LOG')          addLog(msg.msg, msg.level);
-  if (msg.type === 'COUNT')        { counterEl.classList.add('visible'); countNum.textContent = msg.count; refreshQueueCount(); }
+  if (msg.type === 'COUNT')        { refreshQueueCount(); }
   if (msg.type === 'COLLECT_DONE') { refreshQueueCount(); setRunning(false); chrome.storage.local.set({ state: { running: false } }); }
   if (msg.type === 'DONE')         { setRunning(false); chrome.storage.local.set({ state: { running: false } }); }
 });
