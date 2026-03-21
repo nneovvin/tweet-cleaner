@@ -1,7 +1,6 @@
 // 트윗 청소기 v1.0
 // Copyright (c) 2026 myo @nneovvin
 
-// content.js
 if (window.__tcLoaded) { /* skip */ } else {
 window.__tcLoaded = true;
 
@@ -48,9 +47,10 @@ const TC = (() => {
     if (!key) throw new Error('meta key 없음');
     const frames = Array.from(doc.querySelectorAll('[id^="loading-x-anim"]'));
     if (!frames.length) throw new Error('SVG 프레임 없음');
-    const m = html.match(/"ondemand\.s":"([0-9a-f]+)"/);
-    if (!m) throw new Error('ondemand.s 없음');
-    const js   = await (await fetch(`https://abs.twimg.com/responsive-web/client-web/ondemand.s.${m[1]}a.js`)).text();
+    //해시
+    const mainScript = [...doc.querySelectorAll('script[src]')].map(s => s.src).find(s => /\/main\.[0-9a-f]+\.js/.test(s));
+    if (!mainScript) throw new Error('main.js 없음');
+    const js   = await (await fetch(mainScript)).text();
     const hits = [...js.matchAll(/\(\w\[(\d{1,2})\],\s*16\)/g)].map(x => Number(x[1]));
     if (!hits.length) throw new Error('인덱스 없음');
     _cache = { keyBytes: Array.from(atob(key)).map(c => c.charCodeAt(0)), frames, rowIndex: hits[0], keyByteIndices: hits.slice(1) };
