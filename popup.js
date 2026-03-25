@@ -30,7 +30,7 @@ function setRunning(yes) {
 
 async function refreshQueueCount() {
   const { tcQueue = [] } = await chrome.storage.local.get('tcQueue');
-  queueCount.textContent = `${tcQueue.length}건`;
+  queueCount.textContent = `${tcQueue.length}개`;
 }
 
 async function restoreState() {
@@ -56,11 +56,9 @@ chrome.runtime.onMessage.addListener((msg) => {
 async function refreshStatus() {
   const [tab] = await chrome.tabs.query({ url: 'https://x.com/*' });
   if (tab) {
-    dot.className = 'dot online';
     statusText.textContent = tab.url.split('x.com')[1] || '/';
     if (!running) { btnCollect.disabled = false; btnDelete.disabled = false; }
   } else {
-    dot.className = 'dot offline';
     statusText.textContent = 'x.com 탭 필요';
     btnCollect.disabled = true;
     btnDelete.disabled  = true;

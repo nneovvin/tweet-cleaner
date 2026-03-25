@@ -215,7 +215,7 @@ async function runCollect(job) {
 
   _scrollJob = null;
   const { tcQueue = [] } = await chrome.storage.local.get('tcQueue');
-  sendLog(`트윗 로드를 완료했습니다. ${tcQueue.length}건`, 'done');
+  sendLog(`트윗 로드를 완료했습니다. ${tcQueue.length}개`, 'done');
   chrome.runtime.sendMessage({ type: 'COLLECT_DONE', total: tcQueue.length }).catch(() => {});
 }
 
@@ -244,7 +244,7 @@ async function runDelete(opts) {
   if (!filtered.length) { sendLog('조건에 맞는 트윗을 찾지 못하였습니다.'); _deleteJob = null; return; }
 
   filtered.sort((a, b) => a.ts - b.ts);
-  sendLog(`트윗 청소를 시작합니다. ${filtered.length}건 (과거순)`);
+  sendLog(`트윗 청소를 시작합니다. ${filtered.length}개 (과거순)`);
 
   const deletedIds = new Set();
   let count = 0;
@@ -267,7 +267,7 @@ async function runDelete(opts) {
   await chrome.storage.local.set({ tcQueue: queue.filter(t => !deletedIds.has(t.id)) });
   _deleteJob = null;
   chrome.runtime.sendMessage({ type: 'DONE', count }).catch(() => {});
-  sendLog(`트윗 청소를 완료했습니다. ${count}건 삭제`, 'done');
+  sendLog(`트윗 청소를 완료했습니다. ${count}개 삭제`, 'done');
 }
 
 // ── 로그 ─────────────────────────────────────────────────
