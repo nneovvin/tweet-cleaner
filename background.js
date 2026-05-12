@@ -38,7 +38,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (msg.type === 'LOG') {
       saveLog(msg.msg, msg.level, msg.channel);
     }
-    chrome.runtime.sendMessage(msg).catch(() => {});
+    if (msg.type === 'COLLECT_DONE' || msg.type === 'DONE') {
+      chrome.storage.local.set({ state: { running: false } });
+    }
     return;
   }
 

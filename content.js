@@ -244,6 +244,41 @@ function parseCountText(text = '') {
   return Math.round(value * multiplier);
 }
 
+function getLikeControl(article) {
+  return article.querySelector('[data-testid="unlike"], [data-testid="like"]');
+}
+
+function isLikedColor(color) {
+  const match = String(color || '').match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+  if (!match) return false;
+  const [, r, g, b] = match.map(Number);
+  return r >= 220 && g <= 80 && b >= 110 && b <= 190;
+}
+
+function isTweetLikedByMe(article) {
+  const unlikeButton = article.querySelector('[data-testid="unlike"]');
+  if (unlikeButton) return true;
+
+  const likeControl = getLikeControl(article);
+  if (!likeControl) return false;
+  if (likeControl.getAttribute('aria-pressed') === 'true') return true;
+
+  const label = [
+    likeControl.getAttribute('aria-label'),
+    likeControl.getAttribute('title'),
+    likeControl.textContent,
+  ].filter(Boolean).join(' ').toLowerCase();
+  if (/(^|\s)(unlike|liked)(\s|$)|좋아요\s*취소|마음.*취소|마음에\s*들어함/.test(label)) return true;
+
+  try {
+    if (isLikedColor(getComputedStyle(likeControl).color)) return true;
+    const coloredChild = likeControl.querySelector('svg, path, div, span');
+    if (coloredChild && isLikedColor(getComputedStyle(coloredChild).color)) return true;
+  } catch (_) {}
+
+  return false;
+}
+
 function getTweetStatusInfo(article) {
   const href = article.querySelector('time')?.closest('a[href*="/status/"]')?.href;
   const match = href?.match(/\/([^/]+)\/status\/(\d+)/);
@@ -261,14 +296,54 @@ function getTargetUsername() {
   return username;
 }
 
-function getTweetAction(article) {
+function isRetweetArticle(article) {
+  if (article.querySelector('[data-testid="socialContext"], [data-testid="unretweet"]')) return true;
+  const text = (article.textContent || '').toLowerCase();
+  return text.includes('reposted') ||
+    text.includes('retweeted') ||
+    text.includes('님이 재게시') ||
+    text.includes('재게시했습니다') ||
+    text.includes('님이 리트윗') ||
+    text.includes('리트윗했습니다');
+}
+
+function classifyTweetArticle(article, statusInfo = getTweetStatusInfo(article)) {
   const targetUsername = getTargetUsername();
   if (!targetUsername) return null;
-  const { author } = getTweetStatusInfo(article) || {};
+  const { author } = statusInfo || {};
   if (!author) return null;
-  if (author === targetUsername) return 'delete';
-  if (article.querySelector('[data-testid="socialContext"]')) return 'unretweet';
+  if (isRetweetArticle(article)) return { itemType: 'retweet', action: 'unretweet' };
+  if (author === targetUsername) {
+    return { itemType: isReplyTweet(article) ? 'reply' : 'tweet', action: 'delete' };
+  }
   return null;
+}
+
+function getStoredAction(tweet) {
+  if (tweet?.action === 'delete' || tweet?.action === 'unretweet') return tweet.action;
+  return tweet?.itemType === 'retweet' || tweet?.isRetweet ? 'unretweet' : 'delete';
+}
+
+function getStoredItemType(tweet) {
+  if (tweet?.itemType) return tweet.itemType;
+  if (getStoredAction(tweet) === 'unretweet' || tweet?.isRetweet) return 'retweet';
+  return tweet?.isReply ? 'reply' : 'tweet';
+}
+
+function getTweetKey(tweet) {
+  return `${getStoredAction(tweet)}:${tweet.id}`;
+}
+
+function isKnownItemType(itemType) {
+  return itemType === 'tweet' || itemType === 'reply' || itemType === 'retweet';
+}
+
+function getItemTypeCounts(tweets) {
+  return tweets.reduce((counts, tweet) => {
+    const itemType = getStoredItemType(tweet);
+    if (isKnownItemType(itemType)) counts[itemType]++;
+    return counts;
+  }, { tweet: 0, reply: 0, retweet: 0 });
 }
 
 function isReplyTweet(article) {
@@ -304,7 +379,7 @@ function buildVisibleTweetState() {
     if (!id) continue;
     if (currentStatusId && id === currentStatusId) reachedCurrentThread = true;
     states.set(id, {
-      isLikedByMe: !!article.querySelector('[data-testid="unlike"]'),
+      isLikedByMe: isTweetLikedByMe(article),
       isCurrentThreadOrBelow: !!reachedCurrentThread,
     });
   }
@@ -316,8 +391,8 @@ function parseTweetArticle(article, visibleStates = null) {
     const statusInfo = getTweetStatusInfo(article);
     const id = statusInfo?.id;
     if (!id) return null;
-    const action = getTweetAction(article);
-    if (!action) return null;
+    const classification = classifyTweetArticle(article, statusInfo);
+    if (!classification) return null;
     const timeEl = article.querySelector('time[datetime]');
     const ts = timeEl ? new Date(timeEl.getAttribute('datetime')).getTime() : 0;
     const text = getTweetLogText(article);
@@ -325,12 +400,13 @@ function parseTweetArticle(article, visibleStates = null) {
     return {
       id,
       author: statusInfo.author,
-      action,
+      itemType: classification.itemType,
+      action: classification.action,
       ts,
-      likes: parseCountText(article.querySelector('[data-testid="like"], [data-testid="unlike"]')?.textContent),
-      isReply: isReplyTweet(article),
-      isRetweet: !!article.querySelector('[data-testid="socialContext"]'),
-      isLikedByMe: state?.isLikedByMe ?? !!article.querySelector('[data-testid="unlike"]'),
+      likes: parseCountText(getLikeControl(article)?.textContent),
+      isReply: classification.itemType === 'reply',
+      isRetweet: classification.itemType === 'retweet',
+      isLikedByMe: state?.isLikedByMe ?? isTweetLikedByMe(article),
       isCurrentThreadOrBelow: state?.isCurrentThreadOrBelow ?? false,
       text,
     };
@@ -361,7 +437,7 @@ async function runCollect(job) {
   sendLog('트윗 로드 시작 — 자동 스크롤 중...');
 
   let collectedTweets = await getStoredTweets();
-  const existingKeys = new Set(collectedTweets.map(t => `${t.action || 'delete'}:${t.id}`));
+  const existingKeys = new Set(collectedTweets.map(getTweetKey));
   const pendingTweets = new Map();
   let flushTimer = null;
 
@@ -377,10 +453,6 @@ async function runCollect(job) {
     if (newOnes.length) {
       collectedTweets = [...collectedTweets, ...newOnes];
       await setStoredTweets(collectedTweets);
-      for (const t of newOnes) {
-        const label = t.action === 'unretweet' ? 'RT 취소' : '삭제';
-        sendLog(`[${new Date(t.ts).toISOString().slice(0, 10)}] ${label} | ${t.text}`, 'ok', t.action === 'unretweet' ? 'unretweet' : 'delete');
-      }
     }
     chrome.runtime.sendMessage({ type: 'TWEETS_UPDATE', total: collectedTweets.length }).catch(() => {});
   }
@@ -395,9 +467,9 @@ async function runCollect(job) {
     const visibleStates = buildVisibleTweetState();
     const newOnes = roots
       .flatMap(root => parseDomTweets(root, visibleStates))
-      .filter(t => t.id && !existingKeys.has(`${t.action}:${t.id}`));
+      .filter(t => t.id && !existingKeys.has(getTweetKey(t)));
     for (const t of newOnes) {
-      const key = `${t.action}:${t.id}`;
+      const key = getTweetKey(t);
       existingKeys.add(key);
       pendingTweets.set(key, t);
     }
@@ -434,7 +506,9 @@ async function runCollect(job) {
   observer.disconnect();
   await flushTweets(true);
   if (_scrollJob === job) _scrollJob = null;
-  sendLog(job.stop ? `트윗 로드를 중단했습니다. ${collectedTweets.length}개` : `트윗 로드를 완료했습니다. ${collectedTweets.length}개`, job.stop ? 'info' : 'done');
+  const counts = getItemTypeCounts(collectedTweets);
+  const countText = `${collectedTweets.length}개 (트윗 ${counts.tweet}개, 답글 ${counts.reply}개, RT ${counts.retweet}개)`;
+  sendLog(job.stop ? `트윗 로드를 중단했습니다. ${countText}` : `트윗 로드를 완료했습니다. ${countText}`, job.stop ? 'info' : 'done');
   chrome.runtime.sendMessage({ type: 'COLLECT_DONE', total: collectedTweets.length }).catch(() => {});
 }
 
@@ -445,6 +519,7 @@ async function runActions(opts) {
   const job = _deleteJob;
   const tweetsVersion = _tweetsVersion;
   const collectedTweets = await getStoredTweets();
+  let remainingTweets = collectedTweets;
   if (!collectedTweets.length) {
     sendLog('로드하기 버튼을 눌러 주세요.', 'err');
     if (_deleteJob === job) _deleteJob = null;
@@ -464,25 +539,25 @@ async function runActions(opts) {
     return;
   }
 
-  function matchesKind(t, action) {
+  function matchesKind(t) {
     const kind = opts.kind || 'all';
-    if (kind === 'all') return action === 'delete' || action === 'unretweet';
-    if (kind === 'tweet') return action === 'delete' && !t.isReply;
-    if (kind === 'reply') return action === 'delete' && t.isReply;
-    if (kind === 'retweet') return action === 'unretweet';
-    if (kind === 'tweet_retweet') return action === 'unretweet' || (action === 'delete' && !t.isReply);
-    return action === 'delete' || action === 'unretweet';
+    const itemType = getStoredItemType(t);
+    if (kind === 'all') return isKnownItemType(itemType);
+    if (kind === 'tweet') return itemType === 'tweet';
+    if (kind === 'reply') return itemType === 'reply';
+    if (kind === 'retweet') return itemType === 'retweet';
+    if (kind === 'tweet_retweet') return itemType === 'tweet' || itemType === 'retweet';
+    return isKnownItemType(itemType);
   }
 
   const liveStates = (opts.keepThread || opts.keepLiked) ? buildVisibleTweetState() : null;
   const filtered = collectedTweets.filter(t => {
-    const action = t.action || 'delete';
+    const action = getStoredAction(t);
     const liveState = liveStates?.get(t.id);
     const isCurrentThreadOrBelow = liveState?.isCurrentThreadOrBelow ?? t.isCurrentThreadOrBelow;
     const isLikedByMe = liveState?.isLikedByMe ?? t.isLikedByMe;
-    if (action === 'delete' && t.isRetweet) return false;
     if (action !== 'delete' && action !== 'unretweet') return false;
-    if (!matchesKind(t, action)) return false;
+    if (!matchesKind(t)) return false;
     if (opts.keepThread && isCurrentThreadOrBelow) return false;
     if (opts.keepLiked && isLikedByMe) return false;
     if (fromTs && t.ts < fromTs)        return false;
@@ -491,6 +566,12 @@ async function runActions(opts) {
     return true;
   });
 
+  chrome.runtime.sendMessage({ type: 'FILTERED_COUNT', total: filtered.length, loadedTotal: collectedTweets.length }).catch(() => {});
+  const deleteCount = filtered.filter(t => getStoredAction(t) === 'delete').length;
+  const unretweetCount = filtered.filter(t => getStoredAction(t) === 'unretweet').length;
+  const actionBreakdown = ` (트윗 삭제 ${deleteCount}개, RT 취소 ${unretweetCount}개)`;
+  sendLog(`삭제할 트윗은 총 ${filtered.length}개입니다.${actionBreakdown}`, filtered.length ? 'info' : 'err', 'delete');
+
   if (!filtered.length) {
     sendLog('조건에 맞는 트윗을 찾지 못하였습니다.');
     if (_deleteJob === job) _deleteJob = null;
@@ -498,21 +579,21 @@ async function runActions(opts) {
     return;
   }
 
-  const actionNames = [...new Set(filtered.map(t => t.action || 'delete'))].sort((a, b) => {
+  const actionNames = [...new Set(filtered.map(t => getStoredAction(t)))].sort((a, b) => {
     const order = { delete: 0, unretweet: 1 };
     return (order[a] ?? 99) - (order[b] ?? 99);
   });
 
   const completedKeys = new Set();
 
-  async function runActionWorker({ items, channel, action, meanDelay, stdDelay, minDelay }) {
+  async function runActionWorker({ items, channel, runItem, meanDelay, stdDelay, minDelay }) {
     let count = 0;
     for (const t of items) {
       if (job?.stop) break;
       if (!(await waitOrStop(gaussianMs(meanDelay, stdDelay, minDelay), job))) break;
       let ok = false;
       try {
-        let result = await action(t.id, job);
+        let result = await runItem(t.id, job);
         if (result === 'stopped') break;
         if (result === 'rate_limited') {
           const wait = channel === 'unretweet'
@@ -521,7 +602,7 @@ async function runActions(opts) {
           sendLog(`API 제한 초과 — ${(wait / 60000).toFixed(1)}분 후 재시작합니다.`, 'err', channel);
           if (!(await waitOrStop(wait, job))) break;
           sendLog('재시작합니다.', 'info', channel);
-          result = await action(t.id, job);
+          result = await runItem(t.id, job);
           if (result === 'stopped') break;
         }
         ok = result === true;
@@ -530,9 +611,15 @@ async function runActions(opts) {
       }
       if (ok) {
         count++;
-        completedKeys.add(`${t.action || 'delete'}:${t.id}`);
+        const completedKey = getTweetKey(t);
+        completedKeys.add(completedKey);
+        if (tweetsVersion === _tweetsVersion) {
+          remainingTweets = remainingTweets.filter(item => getTweetKey(item) !== completedKey);
+          await setStoredTweets(remainingTweets);
+        }
         chrome.runtime.sendMessage({ type: 'COUNT', count: completedKeys.size, total: filtered.length }).catch(() => {});
-        sendLog(`${count}/${items.length} | ${t.text}`, 'ok', channel);
+        const label = getStoredAction(t) === 'unretweet' ? 'RT 취소' : '삭제';
+        sendLog(`${count}/${items.length} | ${label}: [${new Date(t.ts).toISOString().slice(0, 10)}] | ${t.text}`, 'ok', channel);
       } else {
         sendLog(`실패: ${t.id}`, 'err', channel);
       }
@@ -546,7 +633,7 @@ async function runActions(opts) {
     if (job?.stop) break;
     const channel = actionName;
     const items = filtered
-      .filter(t => (t.action || 'delete') === actionName)
+      .filter(t => getStoredAction(t) === actionName)
       .sort((a, b) => a.ts - b.ts);
     const label = actionName === 'unretweet' ? 'RT 취소' : '트윗 삭제';
     if (!items.length) continue;
@@ -554,7 +641,7 @@ async function runActions(opts) {
     completedCount += await runActionWorker({
       items,
       channel,
-      action: actionName === 'unretweet' ? doUnretweet : doDelete,
+      runItem: actionName === 'unretweet' ? doUnretweet : doDelete,
       meanDelay: actionName === 'unretweet' ? 4500 : 2000,
       stdDelay: actionName === 'unretweet' ? 1200 : 600,
       minDelay: actionName === 'unretweet' ? 2500 : 800,
@@ -562,7 +649,7 @@ async function runActions(opts) {
   }
 
   if (tweetsVersion === _tweetsVersion) {
-    await setStoredTweets(collectedTweets.filter(t => !completedKeys.has(`${t.action || 'delete'}:${t.id}`)));
+    await setStoredTweets(remainingTweets);
   }
   if (_deleteJob === job) _deleteJob = null;
   chrome.runtime.sendMessage({ type: 'DONE', count: completedCount }).catch(() => {});
@@ -576,7 +663,6 @@ function sendLog(msg, level = 'info', channel = 'collect') {
 // ── 메시지 리스너 ─────────────────────────────────────────
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (sender.frameId !== undefined && sender.frameId !== 0) return;
-  if (msg.type === 'PING') { sendResponse({ ok: true }); return; }
   if (msg.type === 'COLLECT') {
     if (_scrollJob) { sendResponse({ error: '이미 수집 중' }); return; }
     const job = { stop: false };

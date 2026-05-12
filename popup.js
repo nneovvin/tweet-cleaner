@@ -29,7 +29,11 @@ function setRunning(yes) {
 
 async function refreshTweetCount() {
   const { tcTweets, tcQueue } = await chrome.storage.local.get(['tcTweets', 'tcQueue']);
-  tweetCount.textContent = `${(tcTweets || tcQueue || []).length}개`;
+  setTweetCount((tcTweets || tcQueue || []).length);
+}
+
+function setTweetCount(count) {
+  tweetCount.textContent = `${Math.max(0, count)}개`;
 }
 
 async function restoreState() {
@@ -43,11 +47,27 @@ async function restoreState() {
 }
 
 chrome.runtime.onMessage.addListener((msg) => {
-  if (msg.type === 'LOG')          addLog(msg.msg, msg.level, msg.channel);
-  if (msg.type === 'COUNT')        { refreshTweetCount(); }
-  if (msg.type === 'TWEETS_UPDATE') { refreshTweetCount(); }
-  if (msg.type === 'COLLECT_DONE') { refreshTweetCount(); setRunning(false); chrome.storage.local.set({ state: { running: false } }); }
-  if (msg.type === 'DONE')         { refreshTweetCount(); setRunning(false); chrome.storage.local.set({ state: { running: false } }); }
+  switch (msg.type) {
+    case 'LOG':
+      addLog(msg.msg, msg.level, msg.channel);
+      break;
+    case 'FILTERED_COUNT':
+      setTweetCount(msg.total || 0);
+      break;
+    case 'COUNT':
+      if (Number.isFinite(msg.total) && Number.isFinite(msg.count)) setTweetCount(msg.total - msg.count);
+      else refreshTweetCount();
+      break;
+    case 'TWEETS_UPDATE':
+      refreshTweetCount();
+      break;
+    case 'COLLECT_DONE':
+    case 'DONE':
+      refreshTweetCount();
+      setRunning(false);
+      chrome.storage.local.set({ state: { running: false } });
+      break;
+  }
 });
 
 async function refreshStatus() {
