@@ -11,7 +11,7 @@ Myo(@nneovvin)가 제작한 Twitter(현 X) 트윗 청소 자동화 서비스입�
 
 ## 설치 방법
 
-<img width="1552" height="902" alt="Tweet Cleaner screenshot" src="https://github.com/user-attachments/assets/d54d4db7-909d-4e4c-a7a9-7bba3f1b81d9" />
+![Image](https://github.com/user-attachments/assets/3b023230-4553-45d0-99d9-8d76af4a1158)
 
 1. main branch의 코드를 `.zip`으로 다운로드합니다.
 2. 개인 pc에서 압축 해제를 합니다.
